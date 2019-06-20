@@ -1,0 +1,4 @@
+{
+	"wheel_map": "/etc/steering_wheel_map.json",
+	"gear_para": "/etc/gear_shift_para.json"
+}

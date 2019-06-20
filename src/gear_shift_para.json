@@ -1,0 +1,32 @@
+{
+	"GEAR_PARA" : [
+		{
+		"POS"			: "First",
+		"VAL"			: "4.12",
+		},
+		{
+		"POS"			: "Second",
+		"VAL"			: "2.84",
+		},
+		{
+		"POS"			: "Third",
+		"VAL"			: "2.28",
+		},
+		{
+		"POS"			: "Fourth",
+		"VAL"			: "1.45",
+		},
+		{
+		"POS"			: "Fifth",
+		"VAL"			: "1.0",
+		},
+		{
+		"POS"			: "Sixth",
+		"VAL"			: "0.69",
+		},
+		{
+		"POS"			: "Reverse",
+		"VAL"			: "3.21",
+		},
+	]
+}

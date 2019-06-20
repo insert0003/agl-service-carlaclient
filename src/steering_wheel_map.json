@@ -1,0 +1,68 @@
+{
+	"PROPERTYS" : [
+		{
+		"PROPERTY"		: "VehicleSpeed",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "3E9",
+		"BIT_POSITION"	: "0",
+		"BIT_SIZE"		: "15",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "EngineSpeed",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "3D9",
+		"BIT_POSITION"	: "16",
+		"BIT_SIZE"		: "16",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "AcceleratorPedalPosition",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "070",
+		"BIT_POSITION"	: "16",
+		"BIT_SIZE"		: "8",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "TransmissionGearInfo",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "0F8",
+		"BIT_POSITION"	: "20",
+		"BIT_SIZE"		: "4",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "TransmissionMode",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "0F8",
+		"BIT_POSITION"	: "16",
+		"BIT_SIZE"		: "4",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "SteeringWheelAngle",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "621",
+		"BIT_POSITION"	: "4",
+		"BIT_SIZE"		: "12",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "TurnSignalStatus",
+		"TYPE"			: "uint16_t",
+		"CANID"			: "2C1",
+		"BIT_POSITION"	: "26",
+		"BIT_SIZE"		: "2",
+		"DLC"			: "8"
+		},
+		{
+		"PROPERTY"		: "LightStatusBrake",
+		"TYPE"			: "bool",
+		"CANID"			: "0B4",
+		"BIT_POSITION"	: "7",
+		"BIT_SIZE"		: "1",
+		"DLC"			: "8"
+		},
+	]
+}

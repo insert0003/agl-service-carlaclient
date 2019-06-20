@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" id="carla-client-service" version="0.1">
+  <name>carla-client-service</name>
+  <content src="config.xml" type="application/vnd.agl.service"/>
+  <description>Carla Client Service</description>
+  <author>TOYOTA</author>
+  <license>APL 2.0</license>
+  <feature name="urn:AGL:widget:required-permission">
+    <param name="urn:AGL:permission::public:hidden" value="required" />
+    <param name="urn:AGL:permission::system:run-by-default" value="required" />
+  </feature>
+  <feature name="urn:AGL:widget:provided-api">
+     <param name="carlaclient" value="ws" />
+  </feature>
+  <feature name="urn:AGL:widget:required-binding">
+    <param name="lib/carla-client-service.so" value="local" />
+  </feature>
+</widget>

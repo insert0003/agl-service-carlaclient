@@ -1,0 +1,6 @@
+{
+	"ip": "192.168.160.168",
+	"port": 12345,
+	"reconnect_interval":1,
+	"reconnect_times":-1
+}
