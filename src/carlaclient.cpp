@@ -334,11 +334,11 @@ int CarlaClient::connect_server()
 #else
 	while(true)
 	{
-		DBG_DEBUG(LOG_PREFIX, "demo_status: %s", demo_status.c_str());
+		// DBG_DEBUG(LOG_PREFIX, "demo_status: %s", demo_status.c_str());
 
 		if(strcmp(demo_status.c_str(), "true") == 0)
 		{
-			DBG_DEBUG(LOG_PREFIX, "demo_status start demo: %s", demo_status.c_str());
+			// DBG_DEBUG(LOG_PREFIX, "demo_status start demo: %s", demo_status.c_str());
 			std::vector<std::string>::iterator iter = gps_data.begin();
 			for(; iter != gps_data.end(); iter++)
 			{
@@ -355,6 +355,11 @@ int CarlaClient::connect_server()
 				cansender.updateValue(VEHICLE_SPEED, atoi(spd_str) * 0.6);
 				cansender.updateValue(ENGINE_SPEED, atoi(engine_str));
 				// DBG_DEBUG(LOG_PREFIX, "spd: %d, engine: %d", atoi(spd_str), atoi(engine_str));
+
+				if(strcmp(demo_status.c_str(), "false") == 0)
+				{
+					break;
+				}
 					
 				usleep(100000);
 			}
@@ -363,7 +368,7 @@ int CarlaClient::connect_server()
 		}
 		else if(strcmp(demo_status.c_str(), "false") == 0)
 		{
-			DBG_DEBUG(LOG_PREFIX, "demo_status stop demo: %s", demo_status.c_str());
+			// DBG_DEBUG(LOG_PREFIX, "demo_status stop demo: %s", demo_status.c_str());
 			emitPosition("-151", "139.74961247577428", "35.66727628835976");
 		}
 

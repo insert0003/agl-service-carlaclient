@@ -11,6 +11,7 @@
   </feature>
   <feature name="urn:AGL:widget:provided-api">
      <param name="carlaclient" value="ws" />
+     <param name="192.168.123.11:4000/carlaclient" value="tcp" /> 
   </feature>
   <feature name="urn:AGL:widget:required-binding">
     <param name="lib/carla-client-service.so" value="local" />
