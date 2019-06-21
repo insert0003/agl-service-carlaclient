@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <sstream>
+#include <string.h>
 
 #include "carlaclient.hpp"
 #include "debugmsg.hpp"
@@ -48,8 +49,10 @@ static const std::vector<std::string> kListEventName
 CarlaClient::CarlaClient() :
 socketfd(0),
 demo_status_change(false),
-demo_status(),
-demo_m()
+demo_status("false"),
+// demo_m(),
+mtx(PTHREAD_MUTEX_INITIALIZER),
+gps_file(NULL)
 {
 	cansender.init();
 }
@@ -71,11 +74,28 @@ int CarlaClient::init()
 
 	loadServer();
 
+	gps_file = fopen("/etc/dummy_gps.txt", "r+");
+	if(gps_file == NULL)
+	{
+		DBG_DEBUG(LOG_PREFIX, "Open dummy gps file err: %s errno : %d", strerror(errno), errno);
+		return -1;
+	}
+
+	char gps_str[128];
+	memset(gps_str, 0, 128);
+	while(fgets(gps_str, 128, gps_file))
+	{
+		gps_data.push_back(gps_str);
+		memset(gps_str, 0, 128);
+	}
+	DBG_DEBUG(LOG_PREFIX, "Read gps data done.");
+
 	return ret;
 }
 
 int CarlaClient::connect_server()
 {
+#if 0
 	struct sockaddr_in sockaddr;
 	char readline[MAXLENGTH];
 	char writeline[MAXLENGTH];
@@ -248,6 +268,112 @@ int CarlaClient::connect_server()
 	}
 
 	return 0;
+#else
+
+#if 0
+	while(true)
+	{
+		// std::lock_guard<std::mutex> guard(demo_m);
+		int loc = pthread_mutex_lock(&mtx);
+		if(loc != 0)
+		{
+			DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_lock");
+		}
+
+		if(demo_status_change)
+		{
+			DBG_DEBUG(LOG_PREFIX, "demo_status: %s", demo_status.c_str());
+
+			if(strcmp(demo_status.c_str(), "true") == 0)
+			{
+				DBG_DEBUG(LOG_PREFIX, "demo_status start demo: %s", demo_status.c_str());
+				std::vector<std::string>::iterator iter = gps_data.begin();
+				for(; iter != gps_data.end(); iter++)
+				{
+					char gps_str[128] = {0};
+					strcpy(gps_str, iter->c_str());
+
+					char *spd_str = strtok(gps_str, " ");
+					char *engine_str = strtok(NULL, " ");
+					char *yaw_str = strtok(NULL, " ");
+					char *lat_str = strtok(NULL, " ");
+					char *lon_str = strtok(NULL, " ");;
+					// DBG_DEBUG(LOG_PREFIX, "gps_str: %s %s %s", yaw_str, lat_str, lon_str);
+					emitPosition(yaw_str, lon_str, lat_str);
+					cansender.updateValue(VEHICLE_SPEED, atoi(spd_str));
+					cansender.updateValue(ENGINE_SPEED, atoi(engine_str));
+					// DBG_DEBUG(LOG_PREFIX, "spd: %d, engine: %d", atoi(spd_str), atoi(engine_str));
+						
+					usleep(100000);
+				}
+			}
+			else if(strcmp(demo_status.c_str(), "false") == 0)
+			{
+				DBG_DEBUG(LOG_PREFIX, "demo_status stop demo: %s", demo_status.c_str());
+				emitPosition("-151", "139.74961247577428", "35.66727628835976");
+			}
+
+			demo_status_change = false;
+		}
+		else
+		{
+			emitPosition("-151", "139.74961247577428", "35.66727628835976");
+			DBG_DEBUG(LOG_PREFIX, "demo_status: usleep 1");
+			usleep(100000);
+			DBG_DEBUG(LOG_PREFIX, "demo_status: usleep 2");
+		}
+
+		loc = pthread_mutex_unlock(&mtx);
+		if(loc != 0)
+		{
+			DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_unlock");
+		}
+	}
+
+	return 0;
+#else
+	while(true)
+	{
+		DBG_DEBUG(LOG_PREFIX, "demo_status: %s", demo_status.c_str());
+
+		if(strcmp(demo_status.c_str(), "true") == 0)
+		{
+			DBG_DEBUG(LOG_PREFIX, "demo_status start demo: %s", demo_status.c_str());
+			std::vector<std::string>::iterator iter = gps_data.begin();
+			for(; iter != gps_data.end(); iter++)
+			{
+				char gps_str[128] = {0};
+				strcpy(gps_str, iter->c_str());
+
+				char *spd_str = strtok(gps_str, " ");
+				char *engine_str = strtok(NULL, " ");
+				char *yaw_str = strtok(NULL, " ");
+				char *lat_str = strtok(NULL, " ");
+				char *lon_str = strtok(NULL, " ");;
+				// DBG_DEBUG(LOG_PREFIX, "gps_str: %s %s %s", yaw_str, lat_str, lon_str);
+				emitPosition(yaw_str, lon_str, lat_str);
+				cansender.updateValue(VEHICLE_SPEED, atoi(spd_str) * 0.6);
+				cansender.updateValue(ENGINE_SPEED, atoi(engine_str));
+				// DBG_DEBUG(LOG_PREFIX, "spd: %d, engine: %d", atoi(spd_str), atoi(engine_str));
+					
+				usleep(100000);
+			}
+
+			demo_status = "false";
+		}
+		else if(strcmp(demo_status.c_str(), "false") == 0)
+		{
+			DBG_DEBUG(LOG_PREFIX, "demo_status stop demo: %s", demo_status.c_str());
+			emitPosition("-151", "139.74961247577428", "35.66727628835976");
+		}
+
+		usleep(100000);
+	}
+
+	return 0;
+#endif
+
+#endif
 }
 
 bool CarlaClient::subscribe(afb_req_t req, EventType event_id)
@@ -271,8 +397,15 @@ bool CarlaClient::subscribe(afb_req_t req, EventType event_id)
 
 bool CarlaClient::set_demo_status(const char *status)
 {
+#if 0
 	DBG_DEBUG(LOG_PREFIX, "demo_status 1: %s", status);
-	std::lock_guard<std::mutex> guard(demo_m);
+	// std::lock_guard<std::mutex> guard(demo_m);
+	int loc = pthread_mutex_lock(&mtx);
+	if(loc != 0)
+	{
+		DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_lock");
+	}
+
 	demo_status_change = true;
 	if(strcmp(status, "true") == 0)
 	{
@@ -284,7 +417,28 @@ bool CarlaClient::set_demo_status(const char *status)
 	}
 	DBG_DEBUG(LOG_PREFIX, "demo_status 2: %s", demo_status.c_str());
 
+	loc = pthread_mutex_unlock(&mtx);
+	if(loc != 0)
+	{
+		DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_unlock");
+	}
+
 	return true;
+#else
+	DBG_DEBUG(LOG_PREFIX, "demo_status 1: %s", status);
+
+	if(strcmp(status, "true") == 0)
+	{
+		demo_status = "true";
+	}
+	else if(strcmp(status, "false") == 0)
+	{
+		demo_status = "false";
+	}
+	DBG_DEBUG(LOG_PREFIX, "demo_status 2: %s", demo_status.c_str());
+
+	return true;
+#endif
 }
 
 int CarlaClient::loadServer()

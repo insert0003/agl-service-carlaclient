@@ -5,7 +5,7 @@
 		"TYPE"			: "uint16_t",
 		"CANID"			: "3E9",
 		"BIT_POSITION"	: "0",
-		"BIT_SIZE"		: "15",
+		"BIT_SIZE"		: "16",
 		"DLC"			: "8"
 		},
 		{

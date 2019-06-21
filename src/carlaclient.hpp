@@ -20,6 +20,8 @@
 #include <map>
 #include <string.h>
 #include <mutex>
+#include <vector>
+#include <pthread.h>
 
 extern "C" {
 #include <afb/afb-binding.h>
@@ -71,7 +73,11 @@ private:
 
 	bool demo_status_change;
 	std::string demo_status;
-	std::mutex demo_m;
+	// std::mutex demo_m;
+	pthread_mutex_t mtx;
+
+	FILE *gps_file;
+	std::vector<std::string> gps_data;
 };
 
 } // namespace carla

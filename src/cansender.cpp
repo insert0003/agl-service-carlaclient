@@ -613,8 +613,8 @@ void CanSender::updateValue(const char *prop, int val)
 			{
 				wheel_info->property[i].curValue.int16_val = (int16_t)val;
 
-				DBG_INFO(LOG_PREFIX, "notify_property_changed name=%s,value=%d", 
-					wheel_info->property[i].name, wheel_info->property[i].curValue);
+				// DBG_INFO(LOG_PREFIX, "notify_property_changed name=%s,value=%d", 
+				// 	wheel_info->property[i].name, wheel_info->property[i].curValue);
 				int rc = carla::push(makeCanData(&wheel_info->property[i]));
 				if(rc < 0)
 				{

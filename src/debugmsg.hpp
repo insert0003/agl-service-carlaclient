@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 namespace carla {
 
@@ -61,12 +62,17 @@ static void _DBG_LOG(enum LOG_LEVEL level, const char* file, const char* func, c
 
     clock_gettime(CLOCK_REALTIME, &tp);
 	time = (tp.tv_sec * 1000000L) + (tp.tv_nsec / 1000);
+    time = time;
+
+    struct timeval timepoint;
+    gettimeofday(&timepoint,NULL); 
 
 	va_list args;
 	va_start(args, log);
 	if (log == NULL || vasprintf(&message, log, args) < 0)
         message = NULL;
-    fprintf(stderr,  "[%10.3f] [%s %s] [%s, %s(), Line:%d] >>> %s \n", time / 1000.0, prefix, ERROR_FLAG[level], file, func, line, message);
+    // fprintf(stderr,  "[%10.3f] [%ld.%ld] [%s %s] [%s, %s(), Line:%d] >>> %s \n", time / 1000.0, timepoint.tv_sec, timepoint.tv_usec, prefix, ERROR_FLAG[level], file, func, line, message);
+    fprintf(stderr,  "[%ld.%ld] [%s %s] [%s, %s(), Line:%d] >>> %s \n", timepoint.tv_sec, timepoint.tv_usec, prefix, ERROR_FLAG[level], file, func, line, message);
     va_end(args);
 	free(message);
 }

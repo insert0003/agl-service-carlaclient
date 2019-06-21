@@ -262,7 +262,7 @@ char * makeCanData(struct prop_info_t *property_info)
 	memset(buf, 0, sizeof(buf));
 	sprintf(buf, "%s#%s", property_info->can_id, makeZeroString(property_info->dlc));
 	mask = (1 << (property_info->bit_size)) - 1;
-	val = mask & property_info->curValue.uint32_val;
+	val = mask & property_info->curValue.int16_val;
 	val = val << ((property_info->dlc * 8) - property_info->bit_size - property_info->bit_pos);
 	mask = mask << ((property_info->dlc * 8) - property_info->bit_size - property_info->bit_pos);
 	mask = ~mask;
@@ -272,7 +272,7 @@ char * makeCanData(struct prop_info_t *property_info)
 	sprintf(tmp, "%lx", p->value);
 	strncpy((buf + 4 + property_info->dlc * 2 -strlen(tmp)), tmp ,strlen(tmp));
 
-//	DBG_ERROR(LOG_PREFIX, "makeCanData buf is [%s]", buf);
+	// DBG_ERROR(LOG_PREFIX, "makeCanData buf is [%s]", buf);
 
 	return buf;
 }
