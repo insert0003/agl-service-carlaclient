@@ -20,8 +20,6 @@
 #include <map>
 #include <string.h>
 #include <mutex>
-#include <vector>
-#include <pthread.h>
 
 extern "C" {
 #include <afb/afb-binding.h>
@@ -49,6 +47,7 @@ public:
 	int connect_server();
 	bool subscribe(afb_req_t req, EventType event_id);
 	bool set_demo_status(const char *status);
+	bool set_amazon_code(const char *code);
 
 private:
 	CarlaClient(CarlaClient const&) = delete;
@@ -73,11 +72,9 @@ private:
 
 	bool demo_status_change;
 	std::string demo_status;
-	// std::mutex demo_m;
-	pthread_mutex_t mtx;
-
-	FILE *gps_file;
-	std::vector<std::string> gps_data;
+	bool amazon_code_change;
+	std::string amazon_code;
+	std::mutex demo_m;
 };
 
 } // namespace carla

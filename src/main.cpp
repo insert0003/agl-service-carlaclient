@@ -96,7 +96,7 @@ noexcept
 void carlaclient_demo(afb_req_t req)
 noexcept
 {
-	fprintf(stderr, "lalalalala-carlaclient_demo\n");
+	fprintf(stderr, "carla-service-carlaclient_demo\n");
 	bool ret = true;
 
 	std::lock_guard<std::mutex> guard(binding_m);
@@ -132,10 +132,50 @@ noexcept
 	}
 }
 
+void carlaclient_set_amazon_code(afb_req_t req)
+noexcept
+{
+	fprintf(stderr, "carla-service-carlaclient_set_amazon_code\n");
+	bool ret = true;
+
+	std::lock_guard<std::mutex> guard(binding_m);
+	if(g_carlaclient == nullptr)
+	{
+		afb_req_fail(req, "failed", "Binding not initialized, did the compositor die?");
+		return;
+	}
+
+	try
+	{
+		json_object *jreq = afb_req_json(req);
+		json_object *j = nullptr;
+		if(!json_object_object_get_ex(jreq, "amazon_code", &j))
+		{
+			afb_req_fail(req, "failed", "Need char const* argument event");
+			return;
+		}
+		const char *amazon_code = json_object_get_string(j);
+		ret = g_carlaclient->set_amazon_code(amazon_code);
+
+		if(!ret)
+		{
+			afb_req_fail(req, "failed", "Error: afb_req_subscribe()");
+			return;
+		}
+		afb_req_success(req, NULL, "success");
+	}
+	catch(std::exception &e)
+	{
+		afb_req_fail_f(req, "failed", "Uncaught exception while calling wm_subscribe: %s", e.what());
+		return;
+	}
+}
+
 const afb_verb_t carlaclient_verbs[]
 = {
 	{	.verb = "subscribe", .callback = carlaclient_subscribe},
 	{	.verb = "demo", .callback = carlaclient_demo},
+	{	.verb = "set_amazon_code", .callback = carlaclient_set_amazon_code},
 	{}};
 
 extern "C" const afb_binding_t afbBindingExport

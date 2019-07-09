@@ -26,8 +26,8 @@ AGL client end for communication with carla server.
     systemctl enable can-dev.service
     ```
     replace the ip with actual PC ip in `carla-server.json`  
-    replace with actual can port in `dev-mapping.conf`  
-    copy `dummy_gps.txt` to `/etc`  
+    replace the ip with actual meter ip in `config.xml`  
+    replace with actual can port in `dev-mapping.conf`
     
 * **Step 3: Install wgt package**
     ```bash

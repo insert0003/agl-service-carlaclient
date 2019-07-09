@@ -23,7 +23,6 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <sstream>
-#include <string.h>
 
 #include "carlaclient.hpp"
 #include "debugmsg.hpp"
@@ -49,10 +48,10 @@ static const std::vector<std::string> kListEventName
 CarlaClient::CarlaClient() :
 socketfd(0),
 demo_status_change(false),
-demo_status("false"),
-// demo_m(),
-mtx(PTHREAD_MUTEX_INITIALIZER),
-gps_file(NULL)
+demo_status(""),
+amazon_code_change(false),
+amazon_code(""),
+demo_m()
 {
 	cansender.init();
 }
@@ -74,28 +73,11 @@ int CarlaClient::init()
 
 	loadServer();
 
-	gps_file = fopen("/etc/dummy_gps.txt", "r+");
-	if(gps_file == NULL)
-	{
-		DBG_DEBUG(LOG_PREFIX, "Open dummy gps file err: %s errno : %d", strerror(errno), errno);
-		return -1;
-	}
-
-	char gps_str[128];
-	memset(gps_str, 0, 128);
-	while(fgets(gps_str, 128, gps_file))
-	{
-		gps_data.push_back(gps_str);
-		memset(gps_str, 0, 128);
-	}
-	DBG_DEBUG(LOG_PREFIX, "Read gps data done.");
-
 	return ret;
 }
 
 int CarlaClient::connect_server()
 {
-#if 0
 	struct sockaddr_in sockaddr;
 	char readline[MAXLENGTH];
 	char writeline[MAXLENGTH];
@@ -144,15 +126,26 @@ int CarlaClient::connect_server()
 
 	while(true)
 	{
-		std::lock_guard<std::mutex> guard(demo_m);
-		if(demo_status_change)
 		{
-			DBG_DEBUG(LOG_PREFIX, "send demo_status: %s", demo_status.c_str());
-			memset(writeline, 0, MAXLENGTH);
-			sprintf(writeline, "{\"demo\":\"%s\"}", demo_status.c_str());
-			DBG_DEBUG(LOG_PREFIX, "send string: %s", writeline);
-			send(socketfd, writeline, strlen(writeline), 0);
-			demo_status_change = false;
+			std::lock_guard<std::mutex> guard(demo_m);
+			if(demo_status_change)
+			{
+				DBG_DEBUG(LOG_PREFIX, "send demo_status: %s", demo_status.c_str());
+				memset(writeline, 0, MAXLENGTH);
+				sprintf(writeline, "{\"cmd\":\"demo\", \"val\":\"%s\"}", demo_status.c_str());
+				DBG_DEBUG(LOG_PREFIX, "send string: %s", writeline);
+				send(socketfd, writeline, strlen(writeline), 0);
+				demo_status_change = false;
+			}
+			else if(amazon_code_change)
+			{
+				DBG_DEBUG(LOG_PREFIX, "send amazon_code: %s", amazon_code.c_str());
+				memset(writeline, 0, MAXLENGTH);
+				sprintf(writeline, "{\"cmd\":\"amazon_code\", \"val\":\"%s\"}", amazon_code.c_str());
+				DBG_DEBUG(LOG_PREFIX, "send string: %s", writeline);
+				send(socketfd, writeline, strlen(writeline), 0);
+				amazon_code_change = false;
+			}
 		}
 
 		memset(readline, 0, MAXLENGTH);
@@ -220,165 +213,63 @@ int CarlaClient::connect_server()
 		//		{"gps": {"latitude": "49.002756551435", "longitude": "8.001536315145"}}
 		//DBG_INFO(LOG_PREFIX, "Recv msg length:%d, content:%s", length, json_object_get_string(jobj));
 
-		json_object_object_foreach(jobj, key, val)
+		if(jobj != nullptr)
 		{
-			if(strcmp(key, kKeyGps) == 0)
+			json_object_object_foreach(jobj, key, val)
 			{
-				json_object *jyaw;
-				json_object *jlon;
-				json_object *jlat;
-				
-				json_object_object_get_ex(val, kKeyYaw, &jyaw);
-				json_object_object_get_ex(val, kKeyLongitude, &jlon);
-				json_object_object_get_ex(val, kKeyLatitude, &jlat);
-
-				// fprintf(stderr, ">>>>> recv msg 3 jgps:%s, jlon:%s, jlat:%s\n",json_object_get_string(jgps),
-				// 		json_object_get_string(jlon), json_object_get_string(jlat));
-				if(jyaw && jlon && jlat)
+				if(strcmp(key, kKeyGps) == 0)
 				{
-					// DBG_DEBUG(LOG_PREFIX, "GPS: %s %s", json_object_get_string(jlon), json_object_get_string(jlat));
-					emitPosition(json_object_get_string(jyaw), json_object_get_string(jlon), json_object_get_string(jlat));
+					json_object *jyaw;
+					json_object *jlon;
+					json_object *jlat;
+					if(val)
+					{
+						json_object_object_get_ex(val, kKeyYaw, &jyaw);
+						json_object_object_get_ex(val, kKeyLongitude, &jlon);
+						json_object_object_get_ex(val, kKeyLatitude, &jlat);
+
+						// fprintf(stderr, ">>>>> recv msg 3 jgps:%s, jlon:%s, jlat:%s\n",json_object_get_string(jgps),
+						// 		json_object_get_string(jlon), json_object_get_string(jlat));
+						if(jyaw && jlon && jlat)
+						{
+							// DBG_DEBUG(LOG_PREFIX, "GPS: %s %s", json_object_get_string(jlon), json_object_get_string(jlat));
+							emitPosition(json_object_get_string(jyaw), json_object_get_string(jlon), json_object_get_string(jlat));
+						}
+					}
+				}
+				else if(strcmp(key, kKeySpeed) == 0)
+				{
+					int speed;
+					if(val)
+					{
+						speed = json_object_get_int(val);
+						// DBG_INFO(LOG_PREFIX, "Speed:%d", speed);
+						cansender.updateValue(VEHICLE_SPEED, speed);
+					}
+				}
+				else if(strcmp(key, kKeyEngineSpd) == 0)
+				{
+					int engine_speed;
+					if(val)
+					{
+						engine_speed = json_object_get_int(val);
+						// DBG_INFO(LOG_PREFIX, "Engine Speed:%d", engine_speed);
+						cansender.updateValue(ENGINE_SPEED, engine_speed);
+					}
+				}
+				else
+				{
+					DBG_ERROR(LOG_PREFIX, "Invalid msg!");
 				}
 			}
-			else if(strcmp(key, kKeySpeed) == 0)
-			{
-				int speed;
-				if(val)
-				{
-					speed = json_object_get_int(val);
-					// DBG_INFO(LOG_PREFIX, "Speed:%d", speed);
-					cansender.updateValue(VEHICLE_SPEED, speed);
-				}
-			}
-			else if(strcmp(key, kKeyEngineSpd) == 0)
-			{
-				int engine_speed;
-				if(val)
-				{
-					engine_speed = json_object_get_int(val);
-					// DBG_INFO(LOG_PREFIX, "Engine Speed:%d", engine_speed);
-					cansender.updateValue(ENGINE_SPEED, engine_speed);
-				}
-			}
-			else
-			{
-				DBG_ERROR(LOG_PREFIX, "Invalid msg!");
-			}
-		}
-	}
-
-	return 0;
-#else
-
-#if 0
-	while(true)
-	{
-		// std::lock_guard<std::mutex> guard(demo_m);
-		int loc = pthread_mutex_lock(&mtx);
-		if(loc != 0)
-		{
-			DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_lock");
-		}
-
-		if(demo_status_change)
-		{
-			DBG_DEBUG(LOG_PREFIX, "demo_status: %s", demo_status.c_str());
-
-			if(strcmp(demo_status.c_str(), "true") == 0)
-			{
-				DBG_DEBUG(LOG_PREFIX, "demo_status start demo: %s", demo_status.c_str());
-				std::vector<std::string>::iterator iter = gps_data.begin();
-				for(; iter != gps_data.end(); iter++)
-				{
-					char gps_str[128] = {0};
-					strcpy(gps_str, iter->c_str());
-
-					char *spd_str = strtok(gps_str, " ");
-					char *engine_str = strtok(NULL, " ");
-					char *yaw_str = strtok(NULL, " ");
-					char *lat_str = strtok(NULL, " ");
-					char *lon_str = strtok(NULL, " ");;
-					// DBG_DEBUG(LOG_PREFIX, "gps_str: %s %s %s", yaw_str, lat_str, lon_str);
-					emitPosition(yaw_str, lon_str, lat_str);
-					cansender.updateValue(VEHICLE_SPEED, atoi(spd_str));
-					cansender.updateValue(ENGINE_SPEED, atoi(engine_str));
-					// DBG_DEBUG(LOG_PREFIX, "spd: %d, engine: %d", atoi(spd_str), atoi(engine_str));
-						
-					usleep(100000);
-				}
-			}
-			else if(strcmp(demo_status.c_str(), "false") == 0)
-			{
-				DBG_DEBUG(LOG_PREFIX, "demo_status stop demo: %s", demo_status.c_str());
-				emitPosition("-151", "139.74961247577428", "35.66727628835976");
-			}
-
-			demo_status_change = false;
 		}
 		else
 		{
-			emitPosition("-151", "139.74961247577428", "35.66727628835976");
-			DBG_DEBUG(LOG_PREFIX, "demo_status: usleep 1");
-			usleep(100000);
-			DBG_DEBUG(LOG_PREFIX, "demo_status: usleep 2");
-		}
-
-		loc = pthread_mutex_unlock(&mtx);
-		if(loc != 0)
-		{
-			DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_unlock");
+			DBG_DEBUG(LOG_PREFIX, "Incomplete json data %s", readline);
 		}
 	}
 
 	return 0;
-#else
-	while(true)
-	{
-		// DBG_DEBUG(LOG_PREFIX, "demo_status: %s", demo_status.c_str());
-
-		if(strcmp(demo_status.c_str(), "true") == 0)
-		{
-			// DBG_DEBUG(LOG_PREFIX, "demo_status start demo: %s", demo_status.c_str());
-			std::vector<std::string>::iterator iter = gps_data.begin();
-			for(; iter != gps_data.end(); iter++)
-			{
-				char gps_str[128] = {0};
-				strcpy(gps_str, iter->c_str());
-
-				char *spd_str = strtok(gps_str, " ");
-				char *engine_str = strtok(NULL, " ");
-				char *yaw_str = strtok(NULL, " ");
-				char *lat_str = strtok(NULL, " ");
-				char *lon_str = strtok(NULL, " ");;
-				// DBG_DEBUG(LOG_PREFIX, "gps_str: %s %s %s", yaw_str, lat_str, lon_str);
-				emitPosition(yaw_str, lon_str, lat_str);
-				cansender.updateValue(VEHICLE_SPEED, atoi(spd_str) * 0.6);
-				cansender.updateValue(ENGINE_SPEED, atoi(engine_str));
-				// DBG_DEBUG(LOG_PREFIX, "spd: %d, engine: %d", atoi(spd_str), atoi(engine_str));
-
-				if(strcmp(demo_status.c_str(), "false") == 0)
-				{
-					break;
-				}
-					
-				usleep(100000);
-			}
-
-			demo_status = "false";
-		}
-		else if(strcmp(demo_status.c_str(), "false") == 0)
-		{
-			// DBG_DEBUG(LOG_PREFIX, "demo_status stop demo: %s", demo_status.c_str());
-			emitPosition("-151", "139.74961247577428", "35.66727628835976");
-		}
-
-		usleep(100000);
-	}
-
-	return 0;
-#endif
-
-#endif
 }
 
 bool CarlaClient::subscribe(afb_req_t req, EventType event_id)
@@ -402,15 +293,8 @@ bool CarlaClient::subscribe(afb_req_t req, EventType event_id)
 
 bool CarlaClient::set_demo_status(const char *status)
 {
-#if 0
 	DBG_DEBUG(LOG_PREFIX, "demo_status 1: %s", status);
-	// std::lock_guard<std::mutex> guard(demo_m);
-	int loc = pthread_mutex_lock(&mtx);
-	if(loc != 0)
-	{
-		DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_lock");
-	}
-
+	std::lock_guard<std::mutex> guard(demo_m);
 	demo_status_change = true;
 	if(strcmp(status, "true") == 0)
 	{
@@ -422,28 +306,17 @@ bool CarlaClient::set_demo_status(const char *status)
 	}
 	DBG_DEBUG(LOG_PREFIX, "demo_status 2: %s", demo_status.c_str());
 
-	loc = pthread_mutex_unlock(&mtx);
-	if(loc != 0)
-	{
-		DBG_DEBUG(LOG_PREFIX, "demo_status: pthread_mutex_unlock");
-	}
+	return true;
+}
+
+bool CarlaClient::set_amazon_code(const char *code)
+{
+	DBG_DEBUG(LOG_PREFIX, "set_amazon_code: %s", code);
+	std::lock_guard<std::mutex> guard(demo_m);
+	amazon_code_change = true;
+	amazon_code = code;
 
 	return true;
-#else
-	DBG_DEBUG(LOG_PREFIX, "demo_status 1: %s", status);
-
-	if(strcmp(status, "true") == 0)
-	{
-		demo_status = "true";
-	}
-	else if(strcmp(status, "false") == 0)
-	{
-		demo_status = "false";
-	}
-	DBG_DEBUG(LOG_PREFIX, "demo_status 2: %s", demo_status.c_str());
-
-	return true;
-#endif
 }
 
 int CarlaClient::loadServer()

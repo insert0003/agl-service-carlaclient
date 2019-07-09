@@ -11,7 +11,7 @@
 		{
 		"PROPERTY"		: "EngineSpeed",
 		"TYPE"			: "uint16_t",
-		"CANID"			: "3D9",
+		"CANID"			: "3E8",
 		"BIT_POSITION"	: "16",
 		"BIT_SIZE"		: "16",
 		"DLC"			: "8"
